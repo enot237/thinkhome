@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>panel</title>
+	<script type="text/javascript" src="js/jquery-3.1.0.min.js"></script>
+	<meta charset="utf-8">
+	<link rel="stylesheet" type="text/css" href="css/main.css">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+
+<nav class="navbar navbar-default" id="enot_nav">
+  <div class="container-fluid">
+    <div class="navbar-header">
+      <a class="navbar-brand" href="/">Thinking home</a>
+    </div>
+    <ul class="nav navbar-nav">
+      <li class="active"><a href="/">Home</a></li>
+      <li><a href="RGB.html">RGB light</a></li>
+      <li><a href="Radio.html">Radio</a></li>
+    </ul>
+  </div>
+</nav>
+
+<div class="information">
+
+<h3>Lights control</h3>
+
+<div class="tag_room">Room:</div>
+<button class="onoff" onclick="change(1)" id="a1">On</button>
+<div class="range-slider">
+  <input onchange="set_pwm(1)" id="input1" class="range-slider__range" type="range" min="0" max="255">
+  <span class="range-slider__value">0</span>
+</div>
+
+<div class="tag_room">Table:</div>
+<button class="onoff" onclick="change(2)" id="a2">On</button>
+<div class="range-slider">
+  <input onchange="set_pwm(2)" id="input2" class="range-slider__range" type="range" min="0" max="255">
+  <span class="range-slider__value">0</span>
+</div>
+</div>
+<br>
+<div class="information" id="other_controls"><h3>Other controls</h3>
+<div class="tag_room">AutoMode:</div>
+<button class="onoff" onclick="change_automode()" id="a3">On</button><div style="opacity: 0;" class="range-slider"><input  id="input2" class="range-slider__range" type="range" min="0" max="255"><span class="range-slider__value">0</span>
+</div>
+<div class="tag_room">Lamp:</div>
+<button class="onoff" onclick="change(4)" id="a4" style="z-index: 99;">On</button><div style="opacity: 0;" class="range-slider"><input  id="input2" class="range-slider__range" type="range" min="0" max="255"><span class="range-slider__value">0</span>
+</div>
+</div>
+
+</div>
+<br>
+
+<div class="information">
+	<table id="weather_table">
+		<tr style="background-color: #edca54;">
+			<td>Place</td><td>Temp</td><td>Other</td>
+		</tr>
+		<tr>
+			<td>Chelyabinsk</td><td></td><td></td>
+		</tr>
+		<tr>
+			<td>Room</td><td></td><td></td>
+		</tr>
+	</table>
+</div>
+
+<div class="information" style="height: 300px;"><h3>Climate control</h3>
+<div id="climate_control">test</div>
+<div class="name">Enabled:</div>
+<button class="button-" onclick="change_automode()" id="a3">On</button>
+
+<div class="name">Secret:</div>
+<button class="button-" onclick="" id="a4">On</button>
+
+</div>
+
+</div>
+
+
+<script type="text/javascript">
+	var rangeSlider = function(){
+    var slider = $('.range-slider'),
+    range = $('.range-slider__range'),
+    value = $('.range-slider__value');
+    
+    slider.each(function(){
+
+    value.each(function(){
+      var value = $(this).prev().attr('value');
+      $(this).html(value);
+    });
+
+    range.on('input', function(){
+      $(this).next(value).html(this.value);
+    });
+  });
+};
+
+rangeSlider();
+function check_light(x){ // this function check for light in room, blocking buttons if light enought
+    request = httpGet("php/socket.php?data=5"); //this "socket.php" was tuning by COMdriver.py
+    if ((request==1)||($("#a3").html()=="On")) {
+    	$(".information").first().attr("style", "opacity: 0.5");
+    	$(".information:first > button").attr("disabled", "disabled");
+    }
+    else{
+    	$(".information").first().attr("style", "opacity: 1");
+    	$(".information:first > button").removeAttr("disabled");
+    }
+}
+
+function httpGet(theUrl) //function for GET requests
+{
+    var xmlHttp = new XMLHttpRequest();
+    xmlHttp.open( "GET", theUrl, false ); // false for synchronous request
+    xmlHttp.send( null );
+    return xmlHttp.responseText;
+}
+
+function change(x) //change state of energy line
+{
+    console.log('changing');
+    httpGet("php/socket.php?data=1"+x);
+    check(x);
+
+}
+function change_automode(){ //turn on/off automode on arduino
+	console.log("changeing automode");
+	httpGet("php/socket.php?data=7");
+	check_automode();
+}
+function check_automode(){ //get state of automode
+    var response = httpGet("php/socket.php?data=6");
+    if (response==1) {
+        $("#a3").attr("style", "background-color: rgba(45,189,120,0.9); z-index: 999;");
+        $("#a3").html("On");
+    }
+    else{
+        $("#a3").attr("style", "background-color: whitesmoke; z-index: 999;");
+        $("#a3").html("Off");
+    }
+    check_light();
+}
+function check(x){ //int x = number of power line, check state of power line and get PWM level on this line (0-255)
+    console.log("checking..."+x);
+    var response = httpGet("php/socket.php?data=3"+x);
+    var a = response.split("|");
+    var now_state = a[0];
+    if (now_state=="1") {
+        $("#a"+x).attr("style", "background-color: rgba(45,189,120,0.9);z-index:999;");
+        $("#a"+x).html("On");
+    }
+    else{
+        $("#a"+x).attr("style", "background-color: whitesmoke;z-index:999;");
+        $("#a"+x).html("Off");
+    }
+    $("#input"+x).val(parseInt(a[1]));
+    $("#input"+x+"+ span").html(parseInt(a[1]));
+}
+function set_pwm(x){ //get value of range input, and set this value to PWM on selected power line
+    var pwm = $("#input"+x).val();
+    console.log(pwm+" on "+ "#input"+x);
+    var pwm_command = toString(pwm);
+    while (pwm.length<3){ //about this cycle: we need to get line, which contain 3 chars, to build correct request
+        pwm = "0"+pwm;
+    }
+    var xmlHttp = new XMLHttpRequest();
+    xmlHttp.open( "GET", "php/socket.php?data=2"+x+pwm, false ); //example of request: socket.php?data=21255, which means set the 255 value of PWM on power line 1
+    xmlHttp.send( null );
+}
+function GetWeather(){ //use you'r key and you'r city code, get it in apixu.com
+    var jsonfile = new XMLHttpRequest();
+    jsonfile.open( "GET", "http://api.apixu.com/v1/current.json?key=************************&q=*********", false );
+    jsonfile.send( null );
+    var rawjson = JSON.parse(jsonfile.responseText);
+    $("table tr:nth-child(2) td:nth-child(2)").html(rawjson.current.temp_c+"&deg;");
+    $("table tr:nth-child(2) td:nth-child(3)").html("wind speed:" +rawjson.current.wind_kph + "km/h");
+
+}
+function GetWeatherDHT22(){
+    var request = httpGet("php/socket.php?data=4");
+    var otvetarray = request.split("|");
+    $("table tr:nth-child(3) td:nth-child(2)").html(otvetarray[0]+"&deg;");
+    $("table tr:nth-child(3) td:nth-child(3)").html("humidity: "+otvetarray[1]+"%");
+    return(otvetarray[0] +"&deg; | "+ otvetarray[1] +"%");
+
+}
+
+var doStuff = function () {
+  // Do stuff
+    check_automode();
+    check(1);
+    check(2);
+    check(4);
+    check_light();
+    GetWeatherDHT22();
+    setTimeout(doStuff, 5000);
+    
+};
+setTimeout(doStuff, 10);
+GetWeather();
+
+</script>
+<script src="js/bootstrap.min.js"></script>
+</body>
+</html>

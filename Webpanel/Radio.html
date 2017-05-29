@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>panel</title>
+	<script type="text/javascript" src="js/jquery-3.1.0.min.js"></script>
+	<meta charset="utf-8">
+	<link rel="stylesheet" type="text/css" href="css/main.css">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+
+<nav class="navbar navbar-default" id="enot_nav">
+  <div class="container-fluid">
+    <div class="navbar-header">
+      <a class="navbar-brand" href="/">Thinking home</a>
+    </div>
+    <ul class="nav navbar-nav">
+      <li><a href="/">Home</a></li>
+      <li><a href="RGB.html">RGB light</a></li>
+      <li class="active"><a href="Radio.html">Radio</a></li>
+    </ul>
+  </div>
+</nav>
+
+<div class="information" id="mpd_control">
+<h3>Radio control</h3>
+<div id="playlist"></div>
+<button type="button" class="btn btn-success"" onclick="playbutton()">Play selected</button>
+<button type="button" class="btn btn-default" onclick="playlist()">update playlist</button>
+<button type="button" class="btn btn-default" onclick="now_playing()">Update current track</button>
+<button type="button" class="btn btn-warning" onclick="update_db()">Update DB</button>
+<div id="now_playing"></div>
+<audio controls="" name="media" preload="none" ><source src="http://localhost:8000/enot237" type="audio/mpeg"></audio>
+</div>
+<script type="text/javascript">
+	
+function httpGet(theUrl)
+{
+    var xmlHttp = new XMLHttpRequest();
+    xmlHttp.open( "GET", theUrl, false ); // false for synchronous request
+    xmlHttp.send( null );
+    return xmlHttp.responseText;
+}
+
+  function playlist() {
+    $("#playlist").html('<select name="selector" id="list">');
+    var feedback = httpGet("php/mpc.php?action=playlist");
+    var test = feedback.split("\n");
+    for (var i = 0; i < test.length-1; i++) {
+      var div = document.getElementById('list');
+      div.innerHTML = div.innerHTML + '<option>'+test[i]+"</option>";
+    }
+    div.innerHTML = div.innerHTML + '</select>';
+  }
+  function playbutton(){
+    selected_block = document.getElementById('list');
+    selected_track = selected_block.selectedIndex+1;
+    httpGet("php/mpc.php?action=play "+ selected_track);
+    now_playing();
+
+  }
+  function now_playing(){
+    $("#now_playing").html(httpGet("php/mpc.php?action=current"));
+  }
+  function update_db(){
+    httpGet('php/mpc.php?action=update_db');
+    playlist();
+  }
+$(function(){playlist();now_playing();});
+</script>
+<script src="js/bootstrap.min.js"></script>
+</body>
+</html>
